@@ -1,0 +1,125 @@
+{
+  "for_only__for_test": {
+    "n": 9876,
+    "accuracy": 0.9970635884973673,
+    "auc": 0.9998966856900616,
+    "eer": 0.0030379082719859596,
+    "confusion": [
+      [
+        4965,
+        17
+      ],
+      [
+        12,
+        4882
+      ]
+    ],
+    "score_real_mean": 0.004341814755167211,
+    "score_fake_mean": 0.9970145072968785
+  },
+  "for_only__tts_test": {
+    "n": 300,
+    "accuracy": 0.6,
+    "auc": null,
+    "eer": null,
+    "confusion": null,
+    "score_real_mean": null,
+    "score_fake_mean": 0.6036286542413314
+  },
+  "combined__holdout": {
+    "n": 9908,
+    "accuracy": 0.9973758578926121,
+    "auc": 0.9999474768087089,
+    "eer": 0.002422341874226298,
+    "confusion": [
+      [
+        4961,
+        17
+      ],
+      [
+        9,
+        4921
+      ]
+    ],
+    "score_real_mean": 0.004098574060170084,
+    "score_fake_mean": 0.9975969527954119
+  },
+  "leave_one_voice_out": {
+    "tts-AriaNeural": {
+      "n": 60,
+      "accuracy": 0.9666666666666667,
+      "auc": null,
+      "eer": null,
+      "confusion": null,
+      "score_real_mean": null,
+      "score_fake_mean": 0.951131784959282
+    },
+    "tts-GuyNeural": {
+      "n": 60,
+      "accuracy": 1.0,
+      "auc": null,
+      "eer": null,
+      "confusion": null,
+      "score_real_mean": null,
+      "score_fake_mean": 0.9989458378071095
+    },
+    "tts-NatashaNeural": {
+      "n": 60,
+      "accuracy": 1.0,
+      "auc": null,
+      "eer": null,
+      "confusion": null,
+      "score_real_mean": null,
+      "score_fake_mean": 0.999970275148418
+    },
+    "tts-NeerjaNeural": {
+      "n": 60,
+      "accuracy": 1.0,
+      "auc": null,
+      "eer": null,
+      "confusion": null,
+      "score_real_mean": null,
+      "score_fake_mean": 0.998609701489659
+    },
+    "tts-SoniaNeural": {
+      "n": 60,
+      "accuracy": 1.0,
+      "auc": null,
+      "eer": null,
+      "confusion": null,
+      "score_real_mean": null,
+      "score_fake_mean": 0.9989142090873675
+    }
+  },
+  "clean_model__channel": {
+    "n": 400,
+    "accuracy": 0.42,
+    "auc": 0.5658353858784892,
+    "eer": 0.4451970443349754,
+    "confusion": [
+      [
+        168,
+        0
+      ],
+      [
+        232,
+        0
+      ]
+    ],
+    "score_real_mean": 2.6392615214207017e-06,
+    "score_fake_mean": 2.691713778007777e-08
+  },
+  "channel_specialist__loro": {
+    "n": 400,
+    "n_clips": 22,
+    "accuracy": 0.3416666666666667,
+    "fold_accuracies": [
+      0.0,
+      0.20833333333333334,
+      0.675,
+      0.45,
+      0.375
+    ],
+    "note": "leave-one-clip-out; overfits speaker identity"
+  }
+}

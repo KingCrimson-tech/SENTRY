@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>SENTRY · streaming voice deepfake detector</title>
+  <meta name="description" content="Real-time, CPU-only detection of synthetic and cloned speech." />
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script defer src="/static/app.js"></script>
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-brand" viewBox="0 0 24 24">
+      <path d="M12 2.5 20 6v5.7c0 4.9-3.4 8.3-8 9.8-4.6-1.5-8-4.9-8-9.8V6l8-3.5Z" />
+      <path d="M6.6 12.2h2.1l1.5-3.6 2.4 7 1.3-3.4h3.5" />
+    </symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24">
+      <rect x="9" y="2.5" width="6" height="11.5" rx="3" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" />
+    </symbol>
+    <symbol id="i-file" viewBox="0 0 24 24">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" />
+      <path d="M14 3v5h5M8.5 13h7M8.5 16.5h4.5" />
+    </symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24">
+      <path d="M9 3h6M10 3v5.2L4.7 18a2.4 2.4 0 0 0 2.1 3.5h10.4a2.4 2.4 0 0 0 2.1-3.5L14 8.2V3" />
+      <path d="M7.2 15h9.6" />
+    </symbol>
+    <symbol id="i-book" viewBox="0 0 24 24">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15Z" />
+      <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20M8 7h8M8 10.5h5" />
+    </symbol>
+    <symbol id="i-play" viewBox="0 0 24 24">
+      <path d="M8 5.5v13l10-6.5-10-6.5Z" />
+    </symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24">
+      <rect x="6" y="6" width="12" height="12" rx="1.5" />
+    </symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24">
+      <path d="M12 16V4M7.5 8.5 12 4l4.5 4.5M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15" />
+    </symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24">
+      <path d="M3 12h2l2-6 3 12 3-9 2 5 2-2h4" />
+    </symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24">
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+      <rect x="9.5" y="9.5" width="5" height="5" rx=".8" />
+      <path d="M9 2.5V6M15 2.5V6M9 18v3.5M15 18v3.5M2.5 9H6M2.5 15H6M18 9h3.5M18 15h3.5" />
+    </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5V12l3 2" />
+    </symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24">
+      <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 12 9 5 9-5M3 16l9 5 9-5" />
+    </symbol>
+    <symbol id="i-download" viewBox="0 0 24 24">
+      <path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17" />
+    </symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24">
+      <path d="M12 3.5 21 20H3L12 3.5Z" />
+      <path d="M12 9v5M12 17.2v.3" />
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <path d="m4.5 12.5 5 5 10-11" />
+    </symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24">
+      <path d="m6 9 6 6 6-6" />
+    </symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24">
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" />
+    </symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#file" aria-label="SENTRY home">
+        <span class="brand-mark"><svg class="icon"><use href="#i-brand" /></svg></span>
+        <span class="brand-copy">
+          <strong>SENTRY</strong>
+          <small>streaming trust engine</small>
+        </span>
+      </a>
+
+      <nav class="tabs" aria-label="Sections" role="tablist">
+        <button class="tab is-active" role="tab" aria-selected="true" data-tab="file" type="button">
+          <svg class="icon"><use href="#i-file" /></svg><span>File analysis</span>
+        </button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="attack" type="button">
+          <svg class="icon"><use href="#i-flask" /></svg><span>Attack lab</span>
+        </button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="method" type="button">
+          <svg class="icon"><use href="#i-book" /></svg><span>Method &amp; limits</span>
+        </button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="live" type="button">
+          <svg class="icon"><use href="#i-mic" /></svg><span>Live mic · experimental</span>
+        </button>
+      </nav>
+
+      <div class="engine-status" title="Detector status">
+        <span class="engine-dot"></span>
+        <span><b>Engine online</b><small id="engine-meta">loading model…</small></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <!-- ============================== LIVE ============================== -->
+    <section class="view" id="view-live" role="tabpanel" aria-labelledby="tab-live" hidden>
+      <div class="page-head">
+        <div class="page-copy">
+          <p class="eyebrow">Live monitor · experimental</p>
+          <h1>Know who is on the call <em>before you trust them.</em></h1>
+          <p class="lede">
+            SENTRY scores one-second windows of speech as they arrive and turns the
+            probability into a single action: <b>log</b> it, <b>challenge</b> the caller,
+            or <b>drop</b> the call. The live microphone path is <b>experimental</b>:
+            room acoustics shift the score, so use file analysis for the validated demo.
+          </p>
+        </div>
+        <div class="stat-rail" aria-label="Model facts">
+          <div class="stat"><b>4 Hz</b><span>decision updates</span></div>
+          <div class="stat"><b>~26 ms</b><span>per window</span></div>
+          <div class="stat"><b>178</b><span>features / window</span></div>
+        </div>
+      </div>
+
+      <div class="demo-grid">
+        <section class="card control-card" aria-labelledby="live-control-title">
+          <div class="card-head">
+            <div>
+              <h2 id="live-control-title">Capture</h2>
+              <p>Server-side microphone capture — no browser permission prompt.</p>
+            </div>
+            <span class="tag"><svg class="icon"><use href="#i-mic" /></svg>input</span>
+          </div>
+
+          <div class="field">
+            <label for="mic-device">Input device</label>
+            <select id="mic-device" class="select"></select>
+          </div>
+
+          <div class="field">
+            <span class="label" id="duration-label">Listen for</span>
+            <div class="segmented" role="group" aria-labelledby="duration-label">
+              <button type="button" class="seg" data-duration="10">10 s</button>
+              <button type="button" class="seg is-active" data-duration="20">20 s</button>
+              <button type="button" class="seg" data-duration="30">30 s</button>
+              <button type="button" class="seg" data-duration="60">60 s</button>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-block" id="mic-start" type="button">
+            <span class="btn-icon"><svg class="icon"><use href="#i-mic" /></svg></span>
+            <span class="btn-text">Start listening</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+
+          <p class="hint">
+            <svg class="icon"><use href="#i-alert" /></svg>
+            Use headphones during a live demo. Speaker output can leak into the
+            microphone and confuse the verdict.
+          </p>
+
+          <div class="mini-readout">
+            <span>Stream state</span>
+            <b id="live-state">idle</b>
+          </div>
+        </section>
+
+        <section class="verdict" id="live-verdict" data-state="idle" aria-live="polite">
+          <div class="verdict-top">
+            <span class="verdict-pill"><i class="dot"></i><span data-role="status">Standing by</span></span>
+            <span class="verdict-meta" data-role="meta">no signal</span>
+          </div>
+          <div class="verdict-main">
+            <div class="verdict-copy">
+              <p class="verdict-kicker" data-role="kicker">SENTRY verdict</p>
+              <h2 data-role="label">Awaiting audio</h2>
+              <p class="verdict-action" data-role="action">
+                Start the microphone, or open the file tab to analyse a recording.
+              </p>
+            </div>
+            <div class="gauge" aria-hidden="true">
+              <svg viewBox="0 0 120 120">
+                <circle class="gauge-track" cx="60" cy="60" r="51" />
+                <circle class="gauge-progress" cx="60" cy="60" r="51"
+                        stroke-dasharray="320.44" stroke-dashoffset="320.44" />
+              </svg>
+              <div class="gauge-value">
+                <strong data-role="score">—</strong>
+                <span>spoof score</span>
+              </div>
+            </div>
+          </div>
+          <div class="verdict-track"><span data-role="fill"></span></div>
+          <div class="ladder" data-role="ladder" aria-label="Decision policy">
+            <div class="tier" data-tier="LOG"><b>LOG</b><span>&lt; 0.40 · no evidence</span></div>
+            <div class="tier" data-tier="CHALLENGE"><b>CHALLENGE</b><span>0.40–0.60 · suspicious</span></div>
+            <div class="tier" data-tier="DROP"><b>DROP</b><span>&gt; 0.60 · AI-generated</span></div>
+          </div>
+          <div class="verdict-foot">
+            <span data-role="foot-left">CPU-only · 1 s window</span>
+            <span data-role="foot-right">ready</span>
+          </div>
+        </section>
+      </div>
+
+      <section class="card chart-card" aria-labelledby="live-chart-title">
+        <div class="card-head chart-head">
+          <div>
+            <h2 id="live-chart-title">Decision trace</h2>
+            <p>Energy on top; spoof probability and the emitted action below.</p>
+          </div>
+          <div class="legend">
+            <span class="key log"><i></i>no evidence</span>
+            <span class="key challenge"><i></i>suspicious</span>
+            <span class="key drop"><i></i>AI-generated</span>
+            <span class="key energy"><i></i>energy</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="live-chart" aria-label="Rolling spoof probability chart"></canvas>
+          <div class="chart-empty" data-chart-empty>
+            <svg class="icon"><use href="#i-wave" /></svg>
+            <span>Waiting for the first window</span>
+          </div>
+        </div>
+        <div class="chart-foot">
+          <span>Thresholds</span>
+          <span class="thresholds">
+            <b class="log">LOG &lt; 0.40</b>
+            <b class="challenge">CHALLENGE 0.40–0.60</b>
+            <b class="drop">DROP &gt; 0.60</b>
+          </span>
+        </div>
+      </section>
+    </section>
+
+    <!-- ============================== FILE ============================== -->
+    <section class="view is-active" id="view-file" role="tabpanel" aria-labelledby="tab-file">
+      <div class="page-head">
+        <div class="page-copy">
+          <p class="eyebrow">File analysis</p>
+          <h1>Drop a recording. <em>Get a clip-level verdict.</em></h1>
+          <p class="lede">
+            The window model is deliberately suspicious of averages. SENTRY scores the
+            top 30% of windows and the share of confident AI windows, so a few synthetic
+            seconds cannot hide inside a long clip.
+          </p>
+        </div>
+        <div class="stat-rail" aria-label="Aggregation facts">
+          <div class="stat"><b>top-30%</b><span>clip score</span></div>
+          <div class="stat"><b>10%</b><span>sparse guard</span></div>
+          <div class="stat"><b data-metric="real_fp">0 / 80</b><span>false positives</span></div>
+        </div>
+      </div>
+
+      <div class="demo-grid">
+        <section class="card control-card" aria-labelledby="file-source-title">
+          <div class="card-head">
+            <div>
+              <h2 id="file-source-title">Source</h2>
+              <p>WAV, FLAC, MP3, OGG or OPUS. Nothing leaves this machine.</p>
+            </div>
+            <span class="tag"><svg class="icon"><use href="#i-upload" /></svg>file</span>
+          </div>
+
+          <label class="dropzone" id="dropzone" for="file-input">
+            <input id="file-input" type="file" accept="audio/*,.wav,.flac,.mp3,.ogg,.opus,.m4a" hidden />
+            <span class="dropzone-icon"><svg class="icon"><use href="#i-upload" /></svg></span>
+            <b>Drop an audio file here</b>
+            <span>or click to browse</span>
+            <small>Up to 120 MB</small>
+          </label>
+
+          <div class="file-info" id="file-info" hidden>
+            <div class="file-row">
+              <span class="file-badge"><svg class="icon"><use href="#i-wave" /></svg></span>
+              <div class="file-name">
+                <b id="file-name">clip.wav</b>
+                <span id="file-size">—</span>
+              </div>
+              <button class="icon-btn" id="file-clear" type="button" aria-label="Remove file">
+                <svg class="icon"><use href="#i-stop" /></svg>
+              </button>
+            </div>
+            <audio id="file-audio" controls preload="metadata"></audio>
+          </div>
+
+          <div class="sample-block">
+            <span class="label">Or load a held-out sample</span>
+            <div class="sample-list" id="sample-list">
+              <span class="sample-loading">loading samples…</span>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-block" id="file-analyze" type="button" disabled>
+            <span class="btn-icon"><svg class="icon"><use href="#i-play" /></svg></span>
+            <span class="btn-text">Analyze file</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+          <p class="hint">
+            <svg class="icon"><use href="#i-file" /></svg>
+            Every analysis writes a JSON report to <code>reports/</code>.
+          </p>
+        </section>
+
+        <section class="verdict" id="file-verdict" data-state="idle" aria-live="polite">
+          <div class="verdict-top">
+            <span class="verdict-pill"><i class="dot"></i><span data-role="status">Standing by</span></span>
+            <span class="verdict-meta" data-role="meta">no file</span>
+          </div>
+          <div class="verdict-main">
+            <div class="verdict-copy">
+              <p class="verdict-kicker" data-role="kicker">SENTRY verdict</p>
+              <h2 data-role="label">No file loaded</h2>
+              <p class="verdict-action" data-role="action">
+                Drop a call recording or voicemail above, then press Analyze.
+              </p>
+            </div>
+            <div class="gauge" aria-hidden="true">
+              <svg viewBox="0 0 120 120">
+                <circle class="gauge-track" cx="60" cy="60" r="51" />
+                <circle class="gauge-progress" cx="60" cy="60" r="51"
+                        stroke-dasharray="320.44" stroke-dashoffset="320.44" />
+              </svg>
+              <div class="gauge-value">
+                <strong data-role="score">—</strong>
+                <span>spoof score</span>
+              </div>
+            </div>
+          </div>
+          <div class="verdict-track"><span data-role="fill"></span></div>
+          <div class="ladder" data-role="ladder" aria-label="Decision policy">
+            <div class="tier" data-tier="LOG"><b>LOG</b><span>&lt; 0.40 · no evidence</span></div>
+            <div class="tier" data-tier="CHALLENGE"><b>CHALLENGE</b><span>0.40–0.60 · suspicious</span></div>
+            <div class="tier" data-tier="DROP"><b>DROP</b><span>&gt; 0.60 · AI-generated</span></div>
+          </div>
+          <div class="verdict-foot">
+            <span data-role="foot-left">CPU-only · 1 s window</span>
+            <span data-role="foot-right">ready</span>
+          </div>
+        </section>
+      </div>
+
+      <section class="card chart-card" aria-labelledby="file-chart-title">
+        <div class="card-head chart-head">
+          <div>
+            <h2 id="file-chart-title">Window trace</h2>
+            <p>One point per 1 s window, coloured by the live decision.</p>
+          </div>
+          <div class="legend">
+            <span class="key log"><i></i>no evidence</span>
+            <span class="key challenge"><i></i>suspicious</span>
+            <span class="key drop"><i></i>AI-generated</span>
+            <span class="key energy"><i></i>energy</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="file-chart" aria-label="Spoof probability over time"></canvas>
+          <div class="chart-empty" data-chart-empty>
+            <svg class="icon"><use href="#i-wave" /></svg>
+            <span>Analyse a clip to see its trace</span>
+          </div>
+        </div>
+        <div class="chart-foot">
+          <span>Thresholds</span>
+          <span class="thresholds">
+            <b class="log">LOG &lt; 0.40</b>
+            <b class="challenge">CHALLENGE 0.40–0.60</b>
+            <b class="drop">DROP &gt; 0.60</b>
+          </span>
+        </div>
+      </section>
+
+      <section class="card evidence-card" id="file-evidence" hidden aria-labelledby="file-evidence-title">
+        <div class="card-head">
+          <div>
+            <h2 id="file-evidence-title">Clip evidence</h2>
+            <p id="file-evidence-sub">Aggregation is over speech-bearing windows only.</p>
+          </div>
+          <a class="btn btn-ghost btn-small" id="file-report" href="#" download hidden>
+            <svg class="icon"><use href="#i-download" /></svg>Download JSON
+          </a>
+        </div>
+        <div class="evidence-grid" id="file-metrics"></div>
+        <div class="evidence-foot">
+          <span id="file-evidence-rule">top-30% + AI-window ratio aggregation</span>
+          <span class="decision-chip" id="file-decision">—</span>
+        </div>
+      </section>
+    </section>
+
+    <!-- ============================== ATTACK ============================== -->
+    <section class="view" id="view-attack" role="tabpanel" aria-labelledby="tab-attack" hidden>
+      <div class="page-head">
+        <div class="page-copy">
+          <p class="eyebrow">Attack lab</p>
+          <h1>Generate the scam. <em>Then try to detect it.</em></h1>
+          <p class="lede">
+            Modern neural TTS is the hard case for detectors trained on 2019 data.
+            Generate a scam script with a current voice and score it in the same pass —
+            this is the extension over the paper.
+          </p>
+        </div>
+        <div class="stat-rail" aria-label="Attack lab facts">
+          <div class="stat"><b>5</b><span>neural voices</span></div>
+          <div class="stat"><b>edge-tts</b><span>2026-era TTS</span></div>
+          <div class="stat"><b data-metric="tts_drop">150 / 150</b><span>generated → DROP</span></div>
+        </div>
+      </div>
+
+      <div class="demo-grid">
+        <section class="card control-card" aria-labelledby="attack-control-title">
+          <div class="card-head">
+            <div>
+              <h2 id="attack-control-title">Script</h2>
+              <p>Write the line a scammer would say, then pick a voice.</p>
+            </div>
+            <span class="tag"><svg class="icon"><use href="#i-spark" /></svg>generate</span>
+          </div>
+
+          <div class="field">
+            <label for="tts-text">What the caller says</label>
+            <textarea id="tts-text" class="textarea" rows="4">Hello, this is a quick verification call from your bank. Please confirm your account number and the OTP you just received.</textarea>
+          </div>
+
+          <div class="field">
+            <label for="tts-voice">Voice</label>
+            <select id="tts-voice" class="select">
+              <option value="en-IN-NeerjaNeural" selected>Neerja · en-IN</option>
+              <option value="en-US-AriaNeural">Aria · en-US</option>
+              <option value="en-US-GuyNeural">Guy · en-US</option>
+              <option value="en-GB-SoniaNeural">Sonia · en-GB</option>
+              <option value="en-AU-NatashaNeural">Natasha · en-AU</option>
+            </select>
+          </div>
+
+          <div class="sample-block">
+            <span class="label">Scam-script presets</span>
+            <div class="preset-list">
+              <button type="button" class="preset" data-voice="en-GB-SoniaNeural"
+                data-text="Hello, this is a quick verification call from your bank. Please confirm your account number and the OTP you just received.">
+                Bank verification
+              </button>
+              <button type="button" class="preset" data-voice="en-US-GuyNeural"
+                data-text="Congratulations! You have won a one thousand dollar gift card. Press one now to claim your prize.">
+                Prize winner
+              </button>
+              <button type="button" class="preset" data-voice="en-US-AriaNeural"
+                data-text="This is Microsoft support. Your computer is infected. Please read me the code shown on your screen.">
+                Tech support
+              </button>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-block" id="tts-generate" type="button">
+            <span class="btn-icon"><svg class="icon"><use href="#i-spark" /></svg></span>
+            <span class="btn-text">Generate voice + detect</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+          <p class="hint">
+            <svg class="icon"><use href="#i-alert" /></svg>
+            Needs internet access for edge-tts. If the network is down, use the file tab.
+          </p>
+
+          <div class="generated" id="tts-generated" hidden>
+            <div class="generated-head">
+              <span class="file-badge"><svg class="icon"><use href="#i-wave" /></svg></span>
+              <div><b>Generated clip</b><span id="tts-generated-name">voice.wav</span></div>
+            </div>
+            <audio id="tts-audio" controls preload="metadata"></audio>
+          </div>
+        </section>
+
+        <section class="verdict" id="attack-verdict" data-state="idle" aria-live="polite">
+          <div class="verdict-top">
+            <span class="verdict-pill"><i class="dot"></i><span data-role="status">Standing by</span></span>
+            <span class="verdict-meta" data-role="meta">attack lab ready</span>
+          </div>
+          <div class="verdict-main">
+            <div class="verdict-copy">
+              <p class="verdict-kicker" data-role="kicker">SENTRY verdict</p>
+              <h2 data-role="label">No clone yet</h2>
+              <p class="verdict-action" data-role="action">
+                Pick a script and a voice, then generate. SENTRY will score the result
+                in the same pass.
+              </p>
+            </div>
+            <div class="gauge" aria-hidden="true">
+              <svg viewBox="0 0 120 120">
+                <circle class="gauge-track" cx="60" cy="60" r="51" />
+                <circle class="gauge-progress" cx="60" cy="60" r="51"
+                        stroke-dasharray="320.44" stroke-dashoffset="320.44" />
+              </svg>
+              <div class="gauge-value">
+                <strong data-role="score">—</strong>
+                <span>spoof score</span>
+              </div>
+            </div>
+          </div>
+          <div class="verdict-track"><span data-role="fill"></span></div>
+          <div class="ladder" data-role="ladder" aria-label="Decision policy">
+            <div class="tier" data-tier="LOG"><b>LOG</b><span>&lt; 0.40 · no evidence</span></div>
+            <div class="tier" data-tier="CHALLENGE"><b>CHALLENGE</b><span>0.40–0.60 · suspicious</span></div>
+            <div class="tier" data-tier="DROP"><b>DROP</b><span>&gt; 0.60 · AI-generated</span></div>
+          </div>
+          <div class="verdict-foot">
+            <span data-role="foot-left">CPU-only · 1 s window</span>
+            <span data-role="foot-right">ready</span>
+          </div>
+        </section>
+      </div>
+
+      <section class="card chart-card" aria-labelledby="attack-chart-title">
+        <div class="card-head chart-head">
+          <div>
+            <h2 id="attack-chart-title">Window trace</h2>
+            <p>Each generated voice is scored window by window.</p>
+          </div>
+          <div class="legend">
+            <span class="key log"><i></i>no evidence</span>
+            <span class="key challenge"><i></i>suspicious</span>
+            <span class="key drop"><i></i>AI-generated</span>
+            <span class="key energy"><i></i>energy</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="attack-chart" aria-label="Spoof probability over time"></canvas>
+          <div class="chart-empty" data-chart-empty>
+            <svg class="icon"><use href="#i-wave" /></svg>
+            <span>Generate a clip to see its trace</span>
+          </div>
+        </div>
+        <div class="chart-foot">
+          <span>Thresholds</span>
+          <span class="thresholds">
+            <b class="log">LOG &lt; 0.40</b>
+            <b class="challenge">CHALLENGE 0.40–0.60</b>
+            <b class="drop">DROP &gt; 0.60</b>
+          </span>
+        </div>
+      </section>
+
+      <section class="card evidence-card" id="attack-evidence" hidden aria-labelledby="attack-evidence-title">
+        <div class="card-head">
+          <div>
+            <h2 id="attack-evidence-title">Clip evidence</h2>
+            <p id="attack-evidence-sub">Aggregation is over speech-bearing windows only.</p>
+          </div>
+          <a class="btn btn-ghost btn-small" id="attack-report" href="#" download hidden>
+            <svg class="icon"><use href="#i-download" /></svg>Download JSON
+          </a>
+        </div>
+        <div class="evidence-grid" id="attack-metrics"></div>
+        <div class="evidence-foot">
+          <span id="attack-evidence-rule">top-30% + AI-window ratio aggregation</span>
+          <span class="decision-chip" id="attack-decision">—</span>
+        </div>
+      </section>
+    </section>
+
+    <!-- ============================== METHOD ============================== -->
+    <section class="view" id="view-method" role="tabpanel" aria-labelledby="tab-method" hidden>
+      <div class="page-head">
+        <div class="page-copy">
+          <p class="eyebrow">Method &amp; limits</p>
+          <h1>A reproducible reimplementation — <em>with the limits stated plainly.</em></h1>
+          <p class="lede">
+            SENTRY is a final-year research prototype built around arXiv:2610.24468.
+            It reproduces the paper's streaming framing, feature families and
+            four-level LOG / CHALLENGE / DROP / UNKNOWN policy on a CPU. It does not claim the paper's
+            FPGA numbers.
+          </p>
+        </div>
+        <div class="stat-rail results" aria-label="Measured results">
+          <div class="stat"><b data-metric="accuracy">99.7%</b><span>accuracy</span></div>
+          <div class="stat"><b data-metric="auc">0.9999</b><span>AUC</span></div>
+          <div class="stat"><b data-metric="eer">0.24%</b><span>EER</span></div>
+        </div>
+      </div>
+      <p class="stat-note">
+        Fake-or-Real held-out · n = <span data-metric="holdout_n">9,908</span> ·
+        unseen 2026 TTS <b data-metric="unseen">60.0%</b> · microphone channel
+        <b data-metric="channel">42.0%</b>
+      </p>
+
+      <section class="method-strip" aria-label="What is reproduced">
+        <div class="method-pill ok"><svg class="icon"><use href="#i-check" /></svg><span><b>Reproduced</b> feature families, streaming windows, four-level action, CPU budget</span></div>
+        <div class="method-pill no"><svg class="icon"><use href="#i-alert" /></svg><span><b>Not reproduced</b> integer lifting front end, Mahalanobis OOD track, FPGA path</span></div>
+        <div class="method-pill new"><svg class="icon"><use href="#i-spark" /></svg><span><b>Extension</b> 2026-era neural TTS, a live attack lab, and an UNKNOWN state for out-of-distribution audio</span></div>
+      </section>
+
+      <div class="method-grid">
+        <section class="card" aria-labelledby="pipeline-title">
+          <div class="card-head">
+            <div>
+              <h2 id="pipeline-title">Pipeline</h2>
+              <p>16 kHz mono in, one action out, every 250 ms.</p>
+            </div>
+            <span class="tag"><svg class="icon"><use href="#i-layers" /></svg>6 stages</span>
+          </div>
+          <ol class="pipeline">
+            <li><span class="step">01</span><div><b>Ingest</b><p>16 kHz mono, DC removal and pre-emphasis.</p></div></li>
+            <li><span class="step">02</span><div><b>Window</b><p>1 s windows with a 0.25 s hop, four scores per second.</p></div></li>
+            <li><span class="step">03</span><div><b>Describe</b><p>MFCC + deltas, spectral shape, wavelet packets, Walsh–Hadamard, waveform micro-stats.</p></div></li>
+            <li><span class="step">04</span><div><b>Classify</b><p>178-d vector into a LightGBM gradient-boosted tree ensemble.</p></div></li>
+            <li><span class="step">05</span><div><b>Smooth</b><p>Median + EMA with two-window hysteresis so the verdict does not flicker.</p></div></li>
+            <li><span class="step">06</span><div><b>Act</b><p>LOG below 0.40, CHALLENGE between 0.40 and 0.60, DROP above 0.60.</p></div></li>
+          </ol>
+        </section>
+
+        <section class="card" aria-labelledby="evidence-title">
+          <div class="card-head">
+            <div>
+              <h2 id="evidence-title">Measured evidence</h2>
+              <p>Grouped held-out split, clean channel.</p>
+            </div>
+            <span class="tag"><svg class="icon"><use href="#i-check" /></svg>verified</span>
+          </div>
+          <div class="evidence-grid static">
+            <div class="ev"><span>Accuracy</span><b data-metric="accuracy">99.7%</b></div>
+            <div class="ev"><span>AUC</span><b data-metric="auc">0.9999</b></div>
+            <div class="ev"><span>EER</span><b data-metric="eer">0.24%</b></div>
+            <div class="ev"><span>Real false positives</span><b data-metric="real_fp">0 / 80</b></div>
+            <div class="ev"><span>Unseen TTS voices</span><b data-metric="lovo">96.7–100%</b></div>
+            <div class="ev warn"><span>Microphone channel</span><b data-metric="channel">42.0%</b></div>
+          </div>
+          <p class="note">
+            The red row is the negative result: the clean model falls to 42% through a
+            speaker and microphone, and a channel-trained specialist overfits speaker
+            identity (34.2% leave-one-clip-out). That is why clone audio goes through
+            the file and attack-lab tabs, and the live mic is marked experimental.
+            Clips outside the training distribution return <b>UNKNOWN</b> instead of
+            being called authentic.
+          </p>
+        </section>
+      </div>
+
+      <div class="accordion-list">
+        <details class="acc" open>
+          <summary><span>Clip-level aggregation</span><svg class="icon"><use href="#i-chevron" /></svg></summary>
+          <div class="acc-body prose">
+            <p>
+              A fake clip only needs <i>some</i> windows to expose the artefact, so the
+              file and attack tabs do not average every window:
+            </p>
+            <ul>
+              <li><b>clip score</b> = mean of the top 30% of windows</li>
+              <li><b>AI-window ratio</b> = fraction of windows ≥ 0.60</li>
+              <li><b>DROP</b> if clip score ≥ 0.50 and ratio ≥ 15%</li>
+              <li><b>CHALLENGE</b> if clip score ≥ 0.40 or ratio ≥ 5%</li>
+              <li><b>CHALLENGE</b> if clip score ≥ 0.20 (gray zone); <b>LOG</b> only below that</li>
+            </ul>
+            <p>
+              The sparse-evidence guard escalates LOG to CHALLENGE when the top-10%
+              score is at least 0.45 but the clip score is still below 0.50. That catches
+              long, noisy or music-backed clips where only a few windows expose the
+              artefact. Held-out real FoR clips max out at 0.212 on this statistic, so the
+              guard keeps 0/80 false positives. It fixes Sonia, whose windows are bimodal:
+              about 35% score 1.0 while the plain mean is only 0.44.
+            </p>
+          </div>
+        </details>
+
+        <details class="acc">
+          <summary><span>What is real vs. reproduced</span><svg class="icon"><use href="#i-chevron" /></svg></summary>
+          <div class="acc-body prose">
+            <ul>
+              <li><b>Reproduced in spirit:</b> feature families, streaming windowing, four-level action, CPU-only budget.</li>
+              <li><b>Not reproduced:</b> the paper's exact integer lifting-wavelet front end, Mahalanobis OOD track and its 98.75% / 1.25% EER numbers.</li>
+              <li><b>Our extension:</b> augmentation with 2026-era neural TTS, a live attack-lab interface, a measured channel-robustness study (speaker → room → mic), and a nearest-neighbour novelty guard that returns <b>UNKNOWN</b> rather than LOG for unfamiliar audio.</li>
+              <li><b>Measured:</b> <span data-metric="accuracy">99.7%</span> accuracy, AUC <span data-metric="auc">0.9999</span>, EER <span data-metric="eer">0.24%</span> on a grouped held-out split (n = <span data-metric="holdout_n">9,908</span>); <span data-metric="lovo">96.7–100%</span> on unseen TTS voices.</li>
+              <li><b>Negative result:</b> modern TTS it has never seen drops to <span data-metric="unseen">60.0%</span>, and the microphone channel to <span data-metric="channel">42.0%</span>. A channel-trained specialist overfits speaker identity (34.2% leave-one-clip-out).</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="acc">
+          <summary><span>Limitations — say these in the viva</span><svg class="icon"><use href="#i-chevron" /></svg></summary>
+          <div class="acc-body prose">
+            <ol>
+              <li>FoR is 2019-era; modern zero-shot clones (ElevenLabs-class) are harder.</li>
+              <li>1 s windows limit low-frequency cues; long-form prosody is ignored.</li>
+              <li>Compression, noise and reverb shift the score; calibrate per channel.</li>
+              <li>This is a <b>decision aid, not forensic proof</b>. Never accuse a person from one score.</li>
+              <li>Trained on English; Indian-language TTS is out of distribution.</li>
+              <li>Long, music-backed in-the-wild reels may expose only a few synthetic windows; the sparse guard flags them as unresolved, not clean.</li>
+              <li>Audio far from the training distribution returns <b>UNKNOWN</b>, not authentic. The novelty guard is a safety net, not a guarantee.</li>
+            </ol>
+          </div>
+        </details>
+
+        <details class="acc">
+          <summary><span>The paper</span><svg class="icon"><use href="#i-chevron" /></svg></summary>
+          <div class="acc-body prose">
+            <p>
+              Banerjee, Chatterjee, Bhattacharya et al.,
+              <i>SENTRY: A Streaming Edge Network Trust Engine for Real-Time Audio
+              Deepfake Detection</i>, arXiv:2610.24468 (Oct 2026).
+            </p>
+            <p class="paper-links">
+              <a href="https://arxiv.org/abs/2610.24468" target="_blank" rel="noreferrer">
+                Open the paper <svg class="icon"><use href="#i-arrow" /></svg>
+              </a>
+            </p>
+          </div>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>SENTRY prototype · Fake-or-Real + edge-tts · a decision aid, not forensic proof.</span>
+    <span>Built around <a href="https://arxiv.org/abs/2610.24468" target="_blank" rel="noreferrer">arXiv:2610.24468</a></span>
+  </footer>
+
+  <div class="toast-stack" id="toasts" aria-live="polite"></div>
+</body>
+</html>

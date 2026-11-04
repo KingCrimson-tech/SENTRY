@@ -1,0 +1,14 @@
+numpy>=2.0
+scipy>=1.13
+pandas>=2.2
+scikit-learn>=1.5
+lightgbm>=4.5
+soundfile>=0.12
+PyWavelets>=1.7
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+huggingface_hub>=0.26
+pyarrow>=17.0
+matplotlib>=3.9
+edge-tts>=7.0

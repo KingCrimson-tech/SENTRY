@@ -1,0 +1,28 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# generated artefacts
+cache/
+reports/
+figures/
+
+# datasets and recordings (the repo ships three clips in samples/)
+data/
+
+# local-only reference material
+sentry.pdf
+sentry_submission.zip
+*.zip
+
+# local-only notes and legacy UI
+RESULTS.md
+REPORT_TEMPLATE.md
+VIVA_PREP.md
+app_gradio.py
+scripts/fill_report.py
+scripts/make_submission.sh
+
+# old model snapshots
+models/archive/
