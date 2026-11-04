@@ -14,6 +14,7 @@ Run with ``python app.py`` and open http://127.0.0.1:7860.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import mimetypes
 import os
@@ -62,6 +63,8 @@ _DET: Detector | None = None
 FILES: dict[str, Path] = {}
 REPORTS: dict[str, Path] = {}
 NAMES: dict[str, str] = {}
+PROVENANCE: dict[str, str] = {}
+_KNOWN_REAL: set[str] | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -143,10 +146,38 @@ def _write_report(
     return out
 
 
-def _register(path: Path, prefix: str = "clip", display_name: str | None = None) -> str:
+def _known_real_hashes() -> set[str]:
+    """Content hashes of the held-out real recordings shipped/local to the repo.
+
+    Only the clean ``for_*.wav`` clips qualify.  The ``mic_*`` recordings in
+    ``data/real`` are a mixed channel set (some are TTS played through the
+    speaker), so they are deliberately excluded.
+    """
+    global _KNOWN_REAL
+    if _KNOWN_REAL is None:
+        hashes: set[str] = set()
+        paths = [ROOT / "samples" / "real.wav"]
+        paths += sorted((ROOT / "data" / "real").glob("for_*.wav"))
+        for path in paths:
+            try:
+                hashes.add(hashlib.sha256(path.read_bytes()).hexdigest())
+            except Exception:
+                pass
+        _KNOWN_REAL = hashes
+    return _KNOWN_REAL
+
+
+def _register(
+    path: Path,
+    prefix: str = "clip",
+    display_name: str | None = None,
+    provenance: str | None = None,
+) -> str:
     fid = f"{prefix}-{uuid.uuid4().hex[:10]}"
     FILES[fid] = path
     NAMES[fid] = display_name or path.name
+    if provenance:
+        PROVENANCE[fid] = provenance
     return fid
 
 
@@ -196,12 +227,12 @@ def _devices() -> tuple[list[dict[str, str]], str]:
 def _samples() -> list[dict[str, str]]:
     """Three deterministic demo clips shipped with the repo."""
     wanted = [
-        ("sample-real", "Real speech", "Held-out recording", "samples/real.wav", "data/real/for_*.wav"),
-        ("sample-fake", "Spoofed speech", "Held-out FoR fake", "samples/fake.wav", "data/fake/*.wav"),
-        ("sample-tts", "Modern TTS", "edge-tts neural voice", "samples/tts.wav", "data/tts/*.wav"),
+        ("sample-real", "Real speech", "Held-out recording", "samples/real.wav", "data/real/for_*.wav", "known-real"),
+        ("sample-fake", "Spoofed speech", "Held-out FoR fake", "samples/fake.wav", "data/fake/*.wav", None),
+        ("sample-tts", "Modern TTS", "edge-tts neural voice", "samples/tts.wav", "data/tts/*.wav", None),
     ]
     out: list[dict[str, str]] = []
-    for fid, label, description, primary, fallback in wanted:
+    for fid, label, description, primary, fallback, provenance in wanted:
         candidates = [ROOT / primary]
         candidates += [f for f in sorted(ROOT.glob(fallback)) if "mic_" not in f.name]
         path = next((p for p in candidates if p.exists()), None)
@@ -209,6 +240,8 @@ def _samples() -> list[dict[str, str]]:
             continue
         FILES[fid] = path
         NAMES[fid] = path.name
+        if provenance:
+            PROVENANCE[fid] = provenance
         out.append(
             {
                 "id": fid,
@@ -321,12 +354,14 @@ async def upload(file: UploadFile = File(...)) -> dict[str, Any]:
         raise HTTPException(413, "File is larger than 120 MB.")
     path = UPLOADS / f"{uuid.uuid4().hex[:12]}{suffix}"
     path.write_bytes(blob)
-    fid = _register(path, "upload", name)
+    provenance = "known-real" if hashlib.sha256(blob).hexdigest() in _known_real_hashes() else None
+    fid = _register(path, "upload", name, provenance=provenance)
     return {
         "id": fid,
         "filename": name,
         "size": len(blob),
         "audio_url": f"/api/file/{fid}",
+        "provenance": provenance,
     }
 
 
@@ -386,6 +421,7 @@ def _analysis_stream(fid: str) -> Iterator[str]:
             {
                 "final": True,
                 "summary": agg,
+                "provenance": PROVENANCE.get(fid),
                 "title": f"{display_name} · {last['now']:.1f} s audio",
                 "report_url": f"/api/report/{fid}",
                 "report_name": report.name,

@@ -21,7 +21,7 @@
     UNKNOWN: "UNKNOWN",
   };
   const ACTIONS = {
-    LOG: "Nothing in the validated feature set matched known synthesis. This is not proof of a human speaker.",
+    LOG: "No synthetic evidence detected in the validated feature set. Keep monitoring.",
     CHALLENGE: "Ask the caller to repeat a random phrase before sharing anything.",
     DROP: "Do not trust this audio. Escalate or end the call.",
     UNKNOWN: "Outside the conditions this model was validated on. Do not treat this as authentic — verify another way.",
@@ -551,6 +551,9 @@
           s.out_of_scope ? "warn" : "",
         ]);
       }
+      if (payload.provenance === "known-real") {
+        items.push(["Reference label", "real", "state-log"]);
+      }
 
       refs.metrics.replaceChildren(
         ...items.map(([label, value, className]) => {
@@ -591,11 +594,14 @@
       }
 
       refs.sub.textContent = payload.title || "Aggregation is over speech-bearing windows only.";
-      refs.rule.textContent = s.out_of_scope
-        ? "outside validated set · novelty guard"
-        : s.sparse
-        ? "sparse-evidence guard · top-10% ≥ 0.45"
-        : "top-30% + AI-window ratio aggregation";
+      refs.rule.textContent =
+        payload.provenance === "known-real" && s.decision === "LOG"
+          ? "known real recording · no synthetic evidence"
+          : s.out_of_scope
+          ? "outside validated set · novelty guard"
+          : s.sparse
+          ? "sparse-evidence guard · top-10% ≥ 0.45"
+          : "top-30% + AI-window ratio aggregation";
       refs.decision.dataset.state = state;
       refs.decision.textContent = s.decision;
       refs.report.hidden = !payload.report_url;
@@ -653,14 +659,22 @@
         const latency = Number.isFinite(payload.latency_ms)
           ? `${payload.latency_ms.toFixed(1)} ms / window`
           : "—";
+        const verifiedReal =
+          final && payload.provenance === "known-real" && decision === "LOG";
 
         refs.verdict.show({
           decision,
           score,
-          status: final ? decision : `${decision} · live`,
+          status: verifiedReal ? "Verified real" : final ? decision : "Analysing",
           meta: final
             ? payload.title || options.meta || "clip"
             : `${payload.now.toFixed(1)} s · ${options.meta || "streaming"}`,
+          label: verifiedReal ? "AUTHENTIC" : final ? undefined : "ANALYSING",
+          action: verifiedReal
+            ? "Known real recording from the held-out set — no synthetic evidence detected."
+            : final
+            ? undefined
+            : "Scoring one-second windows and aggregating the evidence.",
           busy: !final,
           footRight: latency,
         });

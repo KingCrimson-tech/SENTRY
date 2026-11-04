@@ -13,6 +13,7 @@ disagree with the stored evaluation.
 from __future__ import annotations
 
 import glob
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -48,6 +49,39 @@ def check(det: Detector, label: str, path: Path, expect: set[str]) -> bool:
         f"score={agg['score']:.2f} windows={agg['n']:2d} "
         f"in_scope={1 - agg['ood_frac']:.0%} -> {agg['decision']}"
     )
+    return ok
+
+
+def provenance_ok() -> bool:
+    """Every held-out real clip must be recognised as known-real by content hash.
+
+    This is what turns a LOG verdict into the AUTHENTIC / VERIFIED REAL label in
+    the console.  A fake clip must never match.
+    """
+    from app import _known_real_hashes
+
+    known = _known_real_hashes()
+    reals = sorted((ROOT / "data" / "real").glob("for_*.wav"))
+    missing = [
+        p.name
+        for p in reals
+        if hashlib.sha256(p.read_bytes()).hexdigest() not in known
+    ]
+    fake = ROOT / "samples" / "fake.wav"
+    fake_matched = hashlib.sha256(fake.read_bytes()).hexdigest() in known
+    sample = ROOT / "samples" / "real.wav"
+    sample_matched = (
+        sample.exists()
+        and hashlib.sha256(sample.read_bytes()).hexdigest() in known
+    )
+    ok = not missing and not fake_matched and sample_matched
+    detail = (
+        f"known={len(known)} held_out_missing={len(missing)} "
+        f"sample_real={sample_matched} fake_matched={fake_matched}"
+    )
+    print(f"  [{'PASS' if ok else 'FAIL'}] AUTHENTIC provenance is content-hash matched ({detail})")
+    if missing:
+        print(f"         missing: {', '.join(missing[:6])}")
     return ok
 
 
@@ -95,6 +129,7 @@ def main() -> int:
 
     print("\nConsistency")
     ok &= metrics_ok()
+    ok &= provenance_ok()
 
     print("\nREADY FOR DEMO" if ok else "\nNOT READY — fix the FAIL rows above")
     return 0 if ok else 1

@@ -20,6 +20,14 @@ score:
 `LOG` deliberately does **not** mean "this is a human". It means "nothing in the
 validated feature set matched known synthesis". The console says so on screen.
 
+The one exception is **provenance**. Files shipped with the repo or taken from the
+held-out real set are recognised by their SHA-256 content hash. When one of those
+scores `LOG`, the console upgrades the label to **AUTHENTIC / VERIFIED REAL** and
+shows "known real recording · no synthetic evidence". This is a statement about
+that specific file, not a general promise: an arbitrary upload never gets the
+`AUTHENTIC` label. If a known-real file ever scored CHALLENGE or DROP, the
+provenance would not override the decision.
+
 This repo reproduces the paper's **streaming framing, feature families and
 four-level LOG/CHALLENGE/DROP/UNKNOWN policy** in Python/LightGBM. It does **not** reproduce the
 paper's bit-exact integer front end, its Mahalanobis track, or its FPGA
@@ -98,8 +106,9 @@ Run it in the actual room, on the actual laptop, five minutes before the demo.
 
 1. **File analysis** — load the *spoofed speech* sample → **DROP**.
 2. **File analysis** — load the *modern TTS* sample → **DROP**.
-3. **File analysis** — load the *real speech* sample → **LOG** (no synthetic
-   evidence).
+3. **File analysis** — load the *real speech* sample → **AUTHENTIC / VERIFIED
+   REAL** (a known held-out recording, no synthetic evidence). Uploading a file
+   from `data/real` gives the same verdict.
 4. **Attack lab** — generate a scam line with a current voice → **DROP**.
 5. **Method & limits** — show the 60% / 42% rows and the feature-importance
    table. Present the failure before anyone asks about it.
@@ -130,6 +139,9 @@ attack-lab tabs do not average every window:
   CHALLENGE ("unresolved")
 - **novelty guard**: if at least half the windows are far from the training
   manifold, return **UNKNOWN** instead of LOG; a confident DROP is left alone
+- **provenance**: `samples/real.wav` and `data/real/for_*.wav` are matched by
+  SHA-256. A match that scores LOG is shown as **AUTHENTIC / VERIFIED REAL**;
+  it never upgrades a CHALLENGE or DROP, and it never applies to unknown uploads
 
 The sparse guard fixes voices such as `en-GB-SoniaNeural`, whose windows are
 bimodal: about 35% score 1.0 while the plain mean is only 0.44.
